@@ -44,6 +44,11 @@
   font: 14px/1 var(--sans);
 }
 
+.btn-small {
+  padding: 6px 10px;
+  font-size: 13px;
+}
+
 .btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
@@ -149,6 +154,14 @@
   border-top: none;
 }
 
+.group {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-right: 8px;
+}
+
 .check {
   display: flex;
   gap: 12px;
@@ -158,6 +171,10 @@
 
 .check input {
   margin-top: 3px;
+}
+
+.check-episode {
+  padding: 6px 12px;
 }
 
 .label {
@@ -201,6 +218,22 @@
   text-decoration: line-through;
 }
 
+.episodes {
+  list-style: none;
+  padding: 0 0 10px;
+  margin: 0;
+  border-top: 1px dashed var(--border);
+}
+
+.episode {
+  border-top: 1px solid rgba(0, 0, 0, 0);
+}
+
+.episode-watched .main {
+  opacity: 0.7;
+  text-decoration: line-through;
+}
+
 .error {
-  border-color: rgba(239, 68, 68, 0.45);
+  border-color: var(--error-border);
 }

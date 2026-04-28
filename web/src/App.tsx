@@ -4,11 +4,22 @@ import { type Watchlist, type ProgressExport } from './lib/schema'
 import { loadWatchlist } from './lib/watchlist'
 import { useProgress } from './lib/progress'
 
+type TimelineGroup = {
+  groupId: string
+  orderStart: number
+  orderEnd: number
+  sourceLine: number
+  sourceText: string
+  displayText: string
+  contentIds: string[]
+}
+
 function App() {
   const [watchlist, setWatchlist] = useState<Watchlist | null>(null)
   const [watchlistError, setWatchlistError] = useState<string | null>(null)
   const [filter, setFilter] = useState<'all' | 'unwatched' | 'watched'>('all')
   const [query, setQuery] = useState('')
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({})
 
   const { progressByContentId, setWatched, ready, clearAll, exportAll, importAll } = useProgress()
 
@@ -34,19 +45,75 @@ function App() {
     return { watchedCount, totalCount: contentIds.length }
   }, [progressByContentId, watchlist])
 
-  const visibleTimeline = useMemo(() => {
+  const visibleGroups = useMemo(() => {
     if (!watchlist) return []
-    const q = query.trim().toLowerCase()
-    return watchlist.timeline.filter((entry) => {
-      const content = watchlist.contents[entry.contentId]
-      if (!content) return false
 
-      const watched = Boolean(progressByContentId[entry.contentId]?.watched)
-      if (filter === 'watched' && !watched) return false
-      if (filter === 'unwatched' && watched) return false
+    const groups: TimelineGroup[] = []
+    const bySourceLine = new Map<number, TimelineGroup>()
+
+    for (const entry of watchlist.timeline) {
+      const existing = bySourceLine.get(entry.sourceLine)
+      if (existing) {
+        existing.orderEnd = entry.order
+        existing.contentIds.push(entry.contentId)
+      } else {
+        const group: TimelineGroup = {
+          groupId: `line:${entry.sourceLine}`,
+          orderStart: entry.order,
+          orderEnd: entry.order,
+          sourceLine: entry.sourceLine,
+          sourceText: entry.sourceText,
+          displayText: entry.sourceText,
+          contentIds: [entry.contentId],
+        }
+        bySourceLine.set(entry.sourceLine, group)
+        groups.push(group)
+      }
+    }
+
+    const flattened: TimelineGroup[] = []
+    for (const group of groups) {
+      const contents = group.contentIds.map((id) => watchlist.contents[id]).filter(Boolean)
+      const isMultiMovie =
+        group.contentIds.length > 1 && contents.length === group.contentIds.length && contents.every((c) => c.kind === 'movie' || c.kind === 'special')
+
+      if (!isMultiMovie) {
+        flattened.push(group)
+        continue
+      }
+
+      for (let idx = 0; idx < group.contentIds.length; idx += 1) {
+        const contentId = group.contentIds[idx]
+        const content = watchlist.contents[contentId]
+        if (!content) continue
+        const order = group.orderStart + idx
+        flattened.push({
+          groupId: `${group.groupId}:entry:${order}`,
+          orderStart: order,
+          orderEnd: order,
+          sourceLine: group.sourceLine,
+          sourceText: group.sourceText,
+          displayText: content.displayTitle,
+          contentIds: [contentId],
+        })
+      }
+    }
+
+    const q = query.trim().toLowerCase()
+
+    return flattened.filter((group) => {
+      const contents = group.contentIds.map((id) => watchlist.contents[id]).filter(Boolean)
+      if (contents.length === 0) return false
+
+      const watchedCount = group.contentIds.reduce((acc, id) => acc + (progressByContentId[id]?.watched ? 1 : 0), 0)
+      const isAllWatched = watchedCount === group.contentIds.length
+      const isAnyWatched = watchedCount > 0
+
+      if (filter === 'watched' && !isAllWatched) return false
+      if (filter === 'unwatched' && isAnyWatched) return false
 
       if (!q) return true
-      const haystack = `${content.displayTitle} ${content.title} ${entry.sourceText}`.toLowerCase()
+      const haystack = `${group.sourceText} ${group.displayText} ${contents.map((c) => `${c.displayTitle} ${c.title}`).join(' ')}`.toLowerCase()
       return haystack.includes(q)
     })
   }, [filter, progressByContentId, query, watchlist])
@@ -86,6 +153,17 @@ function App() {
     const ok = window.confirm('Clear all watched progress on this device/browser?')
     if (!ok) return
     await clearAll()
+  }
+
+  async function setManyWatched(contentIds: string[], watched: boolean) {
+    for (const contentId of contentIds) {
+      // eslint-disable-next-line no-await-in-loop
+      await setWatched(contentId, watched)
+    }
+  }
+
+  function toggleGroupExpanded(groupId: string) {
+    setExpandedGroups((prev) => ({ ...prev, [groupId]: !prev[groupId] }))
   }
 
   return (
@@ -195,32 +273,83 @@ function App() {
 
           <div className="card list">
             <ol className="timeline">
-              {visibleTimeline.map((entry) => {
-                const content = watchlist.contents[entry.contentId]
-                if (!content) return null
-                const watched = Boolean(progressByContentId[entry.contentId]?.watched)
+              {visibleGroups.map((group) => {
+                const contents = group.contentIds.map((id) => watchlist.contents[id]).filter(Boolean)
+                if (contents.length === 0) return null
+
+                const watchedCount = group.contentIds.reduce((acc, id) => acc + (progressByContentId[id]?.watched ? 1 : 0), 0)
+                const isAllWatched = watchedCount === group.contentIds.length
+                const isAnyWatched = watchedCount > 0
+                const expanded = Boolean(expandedGroups[group.groupId])
+                const rangeLabel =
+                  group.orderStart === group.orderEnd ? `#${group.orderStart}` : `#${group.orderStart} - #${group.orderEnd}`
+
+                const hasUnexpanded = contents.some((c) => c.kind === 'unexpanded_series')
+                const hasUnreleased = contents.some((c) => Boolean(c.unreleased))
 
                 return (
-                  <li key={entry.entryId} className={watched ? 'row row-watched' : 'row'}>
-                    <label className="check">
-                      <input
-                        type="checkbox"
-                        checked={watched}
-                        onChange={(e) => void setWatched(entry.contentId, e.target.checked)}
-                      />
-                      <span className="label">
-                        <span className="main">
-                          <span className="mono">#{entry.order}</span> {content.displayTitle}
+                  <li key={group.groupId} className={isAllWatched ? 'row row-watched' : 'row'}>
+                    <div className="group">
+                      <label className="check">
+                        <input
+                          type="checkbox"
+                          checked={isAllWatched}
+                          ref={(el) => {
+                            if (!el) return
+                            el.indeterminate = isAnyWatched && !isAllWatched
+                          }}
+                          onChange={(e) => void setManyWatched(group.contentIds, e.target.checked)}
+                        />
+                        <span className="label">
+                          <span className="main">
+                            <span className="mono">{rangeLabel}</span> {group.displayText}
+                          </span>
+                          <span className="meta">
+                            <span className="mono">list.txt:{group.sourceLine}</span>
+                            {group.contentIds.length > 1 ? (
+                              <span className="tag">
+                                {watchedCount}/{group.contentIds.length}
+                              </span>
+                            ) : null}
+                            {hasUnreleased ? <span className="tag">Unreleased</span> : null}
+                            {hasUnexpanded ? <span className="tag tag-warn">Needs expansion</span> : null}
+                          </span>
                         </span>
-                        <span className="meta">
-                          <span className="mono">list.txt:{entry.sourceLine}</span>
-                          {content.unreleased ? <span className="tag">Unreleased</span> : null}
-                          {content.kind === 'unexpanded_series' ? (
-                            <span className="tag tag-warn">Needs expansion</span>
-                          ) : null}
-                        </span>
-                      </span>
-                    </label>
+                      </label>
+
+                      {group.contentIds.length > 1 ? (
+                        <button type="button" className="btn btn-small" onClick={() => toggleGroupExpanded(group.groupId)}>
+                          {expanded ? 'Hide episodes' : 'Show episodes'}
+                        </button>
+                      ) : null}
+                    </div>
+
+                    {expanded ? (
+                      <ol className="episodes">
+                        {group.contentIds.map((contentId, idx) => {
+                          const content = watchlist.contents[contentId]
+                          if (!content) return null
+                          const watched = Boolean(progressByContentId[contentId]?.watched)
+                          const watchNumber = group.orderStart + idx
+                          return (
+                            <li key={contentId} className={watched ? 'episode episode-watched' : 'episode'}>
+                              <label className="check check-episode">
+                                <input
+                                  type="checkbox"
+                                  checked={watched}
+                                  onChange={(e) => void setWatched(contentId, e.target.checked)}
+                                />
+                                <span className="label">
+                                  <span className="main">
+                                    <span className="mono">#{watchNumber}</span> {content.displayTitle}
+                                  </span>
+                                </span>
+                              </label>
+                            </li>
+                          )
+                        })}
+                      </ol>
+                    ) : null}
                   </li>
                 )
               })}

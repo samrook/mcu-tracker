@@ -169,13 +169,6 @@ function parseLineToItems(sourceText) {
 
   // Agents of S.H.I.E.L.D. (AoS) shorthands
   if (/^aos\b/i.test(cleaned)) {
-    // AoS Seasons 6 & 7
-    const seasonsMatch = cleaned.match(/seasons?\s+(.+)$/i)
-    if (seasonsMatch) {
-      const seasons = parseSeasonList(seasonsMatch[1])
-      return expandSeriesSeasons({ seriesKey: 'aos', seasons, sourceText })
-    }
-
     // AoS Season 1, Eps 8-16
     const rangeMatch = cleaned.match(/season\s+(\d+)\s*,\s*ep(?:s)?\s*(\d+)\s*-\s*(\d+)/i)
     if (rangeMatch) {
@@ -186,6 +179,15 @@ function parseLineToItems(sourceText) {
         endEp: Number(rangeMatch[3]),
         sourceText,
       })
+    }
+
+    // AoS Seasons 6 & 7 (or whole season)
+    // Important: check this *after* episode ranges, because "AoS Season 1, Eps 1-7"
+    // should not be treated as "whole Season 1".
+    const seasonsMatch = cleaned.match(/seasons?\s+(.+)$/i)
+    if (seasonsMatch && !/ep(?:s)?\b/i.test(seasonsMatch[1])) {
+      const seasons = parseSeasonList(seasonsMatch[1])
+      return expandSeriesSeasons({ seriesKey: 'aos', seasons, sourceText })
     }
   }
 
