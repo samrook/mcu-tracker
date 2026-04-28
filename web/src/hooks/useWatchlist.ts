@@ -9,7 +9,6 @@ export function useWatchlist() {
 
   useEffect(() => {
     let cancelled = false
-    setLoading(true)
     loadWatchlist()
       .then((data) => {
         if (cancelled) return
@@ -29,4 +28,3 @@ export function useWatchlist() {
 
   return { watchlist, error, loading }
 }
-
