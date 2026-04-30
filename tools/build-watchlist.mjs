@@ -2,31 +2,31 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 
 const SERIES = {
-  aos: {
+  'aos': {
     title: 'Agents of S.H.I.E.L.D.',
     seasons: { 1: 22, 2: 22, 3: 22, 4: 22, 5: 22, 6: 13, 7: 13 },
   },
   'agent-carter': { title: 'Agent Carter', seasons: { 1: 8, 2: 10 } },
-  daredevil: { title: 'Daredevil', seasons: { 1: 13, 2: 13, 3: 13 } },
+  'daredevil': { title: 'Daredevil', seasons: { 1: 13, 2: 13, 3: 13 } },
   'daredevil-born-again': { title: 'Daredevil: Born Again', seasons: { 1: 9, 2: 8 } },
   'jessica-jones': { title: 'Jessica Jones', seasons: { 1: 13, 2: 13, 3: 13 } },
   'luke-cage': { title: 'Luke Cage', seasons: { 1: 13, 2: 13 } },
   'iron-fist': { title: 'Iron Fist', seasons: { 1: 13, 2: 10 } },
-  defenders: { title: 'The Defenders', seasons: { 1: 8 } },
-  punisher: { title: 'The Punisher', seasons: { 1: 13, 2: 13 } },
-  loki: { title: 'Loki', seasons: { 1: 6, 2: 6 } },
-  wandavision: { title: 'WandaVision', seasons: { 1: 9 } },
+  'defenders': { title: 'The Defenders', seasons: { 1: 8 } },
+  'punisher': { title: 'The Punisher', seasons: { 1: 13, 2: 13 } },
+  'loki': { title: 'Loki', seasons: { 1: 6, 2: 6 } },
+  'wandavision': { title: 'WandaVision', seasons: { 1: 9 } },
   'falcon-winter-soldier': { title: 'The Falcon and the Winter Soldier', seasons: { 1: 6 } },
-  hawkeye: { title: 'Hawkeye', seasons: { 1: 6 } },
+  'hawkeye': { title: 'Hawkeye', seasons: { 1: 6 } },
   'moon-knight': { title: 'Moon Knight', seasons: { 1: 6 } },
-  echo: { title: 'Echo', seasons: { 1: 5 } },
+  'echo': { title: 'Echo', seasons: { 1: 5 } },
   'ms-marvel': { title: 'Ms. Marvel', seasons: { 1: 6 } },
   'she-hulk': { title: 'She-Hulk: Attorney at Law', seasons: { 1: 9 } },
   'secret-invasion': { title: 'Secret Invasion', seasons: { 1: 6 } },
   'agatha-all-along': { title: 'Agatha All Along', seasons: { 1: 9 } },
-  ironheart: { title: 'Ironheart', seasons: { 1: 6 } },
+  'ironheart': { title: 'Ironheart', seasons: { 1: 6 } },
   'i-am-groot': { title: 'I Am Groot', seasons: { 1: 5, 2: 5 } },
-  visionquest: { title: 'VisionQuest', seasons: { 1: 8 } },
+  'visionquest': { title: 'VisionQuest', seasons: { 1: 8 } },
   'wonder-man': { title: 'Wonder Man', seasons: { 1: 8 } },
 }
 
@@ -230,12 +230,12 @@ function parseLineToItems(sourceText) {
       const season = Number(seasonMatch[2])
 
       const seriesKeyByName = {
-        daredevil: 'daredevil',
+        'daredevil': 'daredevil',
         'jessica jones': 'jessica-jones',
         'luke cage': 'luke-cage',
         'iron fist': 'iron-fist',
         'the punisher': 'punisher',
-        punisher: 'punisher',
+        'punisher': 'punisher',
         'daredevil: born again': 'daredevil-born-again',
       }
 
