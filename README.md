@@ -33,8 +33,6 @@
 
 Marvel Cinematic Universe rewatch tracker — a local-first, browser-based tool for tracking your MCU movie and TV show rewatching progress at the episode level. It's a lightweight React app that reads your watchlist from a simple list.txt file, stores progress locally in the browser, and lets you export and import your progress between devices.
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
 ### Built With
 
 * [![React][React.js]][React-url]
